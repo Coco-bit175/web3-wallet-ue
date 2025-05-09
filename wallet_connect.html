@@ -1,52 +1,57 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Connect Phantom Wallet</title>
+  <title>Connect Wallet</title>
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@solana/web3.js@1.91.2/lib/index.iife.min.js"></script>
   <style>
     body {
-      background-color: #121212;
-      color: #ffffff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      font-family: sans-serif;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding-top: 100px;
+      background-color: #0f172a;
+      color: white;
     }
     button {
-      background: #8e44ad;
-      color: white;
-      border: none;
-      padding: 14px 28px;
-      border-radius: 6px;
+      padding: 15px 30px;
       font-size: 18px;
+      border: none;
+      border-radius: 10px;
       cursor: pointer;
-    }
-    button:hover {
-      background: #9b59b6;
+      background-color: #6366f1;
+      color: white;
     }
   </style>
+</head>
+<body>
+  <h1>Connect Your Phantom Wallet</h1>
+  <button onclick="connectWallet()">Connect Wallet</button>
+
   <script>
-   const socket = io();
-    const urlParams = new URLSearchParams(window.location.search);
-    const sessionId = urlParams.get('sessionId');
-
     async function connectWallet() {
-      try {
-        if (!window.solana || !window.solana.isPhantom) {
-          alert('Phantom Wallet not found!');
-          return;
-        }
+      const sessionId = new URLSearchParams(window.location.search).get('sessionId') || 'default-session';
+      const socket = io("http://localhost:3000"); // change to your server IP or domain
 
+      socket.emit('join_session', sessionId);
+
+      if (!window.solana || !window.solana.isPhantom) {
+        alert("Phantom wallet is not installed!");
+        return;
+      }
+
+      try {
         const resp = await window.solana.connect();
         const walletAddress = resp.publicKey.toString();
 
+        // Get SOL balance
         const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'), 'confirmed');
-        const publicKey = new solanaWeb3.PublicKey(walletAddress);
-        const balanceLamports = await connection.getBalance(publicKey);
+        const balanceLamports = await connection.getBalance(resp.publicKey);
         const solBalance = balanceLamports / solanaWeb3.LAMPORTS_PER_SOL;
 
+        console.log("Wallet Address:", walletAddress);
+        console.log("SOL Balance:", solBalance);
+
+        // Emit to Unreal backend server
         socket.emit('wallet_connected', {
           sessionId,
           walletAddress,
@@ -54,20 +59,16 @@
         });
 
         document.body.innerHTML = `
-          <h2>Wallet Connected!</h2>
-          <p>Address: ${walletAddress}</p>
-          <p>SOL Balance: ${solBalance.toFixed(4)} SOL</p>
+          <h2>Wallet Connected</h2>
+          <p><strong>Address:</strong> ${walletAddress}</p>
+          <p><strong>SOL Balance:</strong> ${solBalance.toFixed(4)}</p>
         `;
+
       } catch (err) {
-        alert('Error connecting: ' + err.message);
+        console.error("Wallet connection failed", err);
+        alert("Wallet connection failed");
       }
     }
-
-    window.onload = connectWallet;
   </script>
-</head>
-<body>
-  <h2>Connect to Phantom Wallet</h2>
-  <button onclick="connectWallet()">Connect Wallet</button>
 </body>
 </html>
