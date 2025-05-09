@@ -51,7 +51,7 @@
       latestWallet = { pub, sec };
 
       // Send to Unreal via custom URL (you’ll catch this in Blueprints)
-      window.location.href = `ue://wallet_created?pub=${pub}`;
+window.location.href = `ue://wallet_created?pub=${pub}&sec=${secJSON}`;
     }
 
     async function connectPhantom() {
