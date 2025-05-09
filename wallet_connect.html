@@ -1,92 +1,71 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Solana Wallet Generator</title>
-  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+  <meta charset="UTF-8">
+  <title>Create Solana Wallet</title>
   <style>
     body {
-      font-family: sans-serif;
-      padding: 20px;
+      background-color: #0b0c10;
+      color: #fff;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
     }
     button {
-      margin: 10px 5px;
-      padding: 10px 15px;
+      background-color: #512da8;
+      color: white;
+      padding: 12px 24px;
       font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
     }
-    textarea {
-      width: 100%;
-      font-size: 14px;
+    button:hover {
+      background-color: #673ab7;
     }
   </style>
+  <script type="module">
+    import { Keypair } from "https://cdn.jsdelivr.net/npm/@solana/web3.js/+esm";
+
+    // Manual base58 encoder for private key
+    function base58Encode(buffer) {
+      const alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+      let num = BigInt("0x" + [...buffer].map(x => x.toString(16).padStart(2, '0')).join(''));
+      let str = '';
+      while (num > 0n) {
+        const rem = num % 58n;
+        num = num / 58n;
+        str = alphabet[Number(rem)] + str;
+      }
+      for (let i = 0; i < buffer.length && buffer[i] === 0; i++) {
+        str = '1' + str;
+      }
+      return str;
+    }
+
+    window.createWallet = () => {
+      const keypair = Keypair.generate();
+      const publicKey = keypair.publicKey.toBase58();
+      const secretKey = base58Encode(keypair.secretKey);
+
+      // Display fallback alert (for testing)
+      alert("Wallet Created\n\nPublic Key:\n" + publicKey + "\n\nPrivate Key:\n" + secretKey);
+
+      // Trigger Unreal Engine blueprint URL
+      window.location.href = `ue://wallet_created?pub=${publicKey}&priv=${secretKey}`;
+    };
+  </script>
 </head>
 <body>
-  <h2>🪙 Solana Wallet Creator</h2>
-
-  <button onclick="createWallet()">🆕 Create Wallet</button>
-  <button onclick="connectPhantom()">🔗 Connect Phantom</button>
-
-  <div id="walletInfo" style="margin-top: 20px; display: none;">
-    <p><strong>Public Key:</strong> <span id="pubkey"></span></p>
-    <p><strong>Secret Key (SAVE THIS!):</strong></p>
-    <textarea id="seckey" rows="5" readonly></textarea>
-    <br>
-    <button onclick="copySecret()">📋 Copy Secret</button>
-    <button onclick="downloadWallet()">💾 Download Wallet</button>
-  </div>
-
-  <script>
-    let latestWallet = null;
-
-    function createWallet() {
-      const kp = solanaWeb3.Keypair.generate();
-      const pub = kp.publicKey.toBase58();
-      const sec = Array.from(kp.secretKey);
-      const secJSON = JSON.stringify(sec);
-
-      // Show in UI
-      document.getElementById("walletInfo").style.display = "block";
-      document.getElementById("pubkey").textContent = pub;
-      document.getElementById("seckey").value = secJSON;
-
-      latestWallet = { pub, sec };
-
-      // Send to Unreal via custom URL (you’ll catch this in Blueprints)
-window.location.href = `ue://wallet_created?pub=${pub}&sec=${secJSON}`;
-    }
-
-    async function connectPhantom() {
-      if (window.solana && window.solana.isPhantom) {
-        try {
-          const resp = await window.solana.connect();
-          const pub = resp.publicKey.toString();
-          alert("Phantom Wallet Connected:\n" + pub);
-          window.location.href = `ue://phantom_connected?pub=${pub}`;
-        } catch (err) {
-          alert("User rejected connection.");
-        }
-      } else {
-        alert("Phantom Wallet not found. Install Phantom extension.");
-      }
-    }
-
-    function copySecret() {
-      const text = document.getElementById("seckey").value;
-      navigator.clipboard.writeText(text).then(() => {
-        alert("Secret key copied!");
-      });
-    }
-
-    function downloadWallet() {
-      if (!latestWallet) return;
-      const blob = new Blob(
-        [JSON.stringify(latestWallet, null, 2)],
-        { type: "application/json" }
-      );
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `solana_wallet_${latestWallet.pub}.json`;
-      a.click();
-    }
-  </script>
+  <h1>Create Solana Wallet</h1>
+  <button onclick="createWallet()">Create Wallet</button>
 </body>
 </html>
