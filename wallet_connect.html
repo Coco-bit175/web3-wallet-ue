@@ -28,31 +28,42 @@
     }
   </style>
   <script>
+   const socket = io();
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('sessionId');
+
     async function connectWallet() {
       try {
         if (!window.solana || !window.solana.isPhantom) {
-          alert("Phantom Wallet not found. Please install it.");
+          alert('Phantom Wallet not found!');
           return;
         }
 
-        const response = await window.solana.connect();
-        const walletAddress = response.publicKey.toString();
+        const resp = await window.solana.connect();
+        const walletAddress = resp.publicKey.toString();
 
-        // Send back to Unreal via URL
-        window.location.href = `ue://phantom_connected?address=${walletAddress}`;
+        const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'), 'confirmed');
+        const publicKey = new solanaWeb3.PublicKey(walletAddress);
+        const balanceLamports = await connection.getBalance(publicKey);
+        const solBalance = balanceLamports / solanaWeb3.LAMPORTS_PER_SOL;
+
+        socket.emit('wallet_connected', {
+          sessionId,
+          walletAddress,
+          solBalance
+        });
+
+        document.body.innerHTML = `
+          <h2>Wallet Connected!</h2>
+          <p>Address: ${walletAddress}</p>
+          <p>SOL Balance: ${solBalance.toFixed(4)} SOL</p>
+        `;
       } catch (err) {
-        alert("Connection failed: " + err.message);
+        alert('Error connecting: ' + err.message);
       }
     }
 
-    window.onload = () => {
-      // Auto-inject Phantom if available
-      if (window.solana && window.solana.isPhantom) {
-        console.log("Phantom Wallet found.");
-      } else {
-        console.warn("Phantom Wallet not found.");
-      }
-    };
+    window.onload = connectWallet;
   </script>
 </head>
 <body>
