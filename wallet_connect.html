@@ -1,38 +1,92 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Solana Wallet</title>
+  <title>Solana Wallet Generator</title>
   <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    button {
+      margin: 10px 5px;
+      padding: 10px 15px;
+      font-size: 16px;
+    }
+    textarea {
+      width: 100%;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h2>🪙 Solana Wallet Creator</h2>
+
+  <button onclick="createWallet()">🆕 Create Wallet</button>
+  <button onclick="connectPhantom()">🔗 Connect Phantom</button>
+
+  <div id="walletInfo" style="margin-top: 20px; display: none;">
+    <p><strong>Public Key:</strong> <span id="pubkey"></span></p>
+    <p><strong>Secret Key (SAVE THIS!):</strong></p>
+    <textarea id="seckey" rows="5" readonly></textarea>
+    <br>
+    <button onclick="copySecret()">📋 Copy Secret</button>
+    <button onclick="downloadWallet()">💾 Download Wallet</button>
+  </div>
+
   <script>
-    async function createWallet() {
+    let latestWallet = null;
+
+    function createWallet() {
       const kp = solanaWeb3.Keypair.generate();
-      window.ue.interface.sendMessage("WalletInterface", JSON.stringify({
-        type: "new_wallet",
-        publicKey: kp.publicKey.toBase58(),
-        secretKey: Array.from(kp.secretKey)
-      }));
+      const pub = kp.publicKey.toBase58();
+      const sec = Array.from(kp.secretKey);
+      const secJSON = JSON.stringify(sec);
+
+      // Show in UI
+      document.getElementById("walletInfo").style.display = "block";
+      document.getElementById("pubkey").textContent = pub;
+      document.getElementById("seckey").value = secJSON;
+
+      latestWallet = { pub, sec };
+
+      // Send to Unreal via custom URL (you’ll catch this in Blueprints)
+      window.location.href = `ue://wallet_created?pub=${pub}`;
     }
 
     async function connectPhantom() {
       if (window.solana && window.solana.isPhantom) {
         try {
           const resp = await window.solana.connect();
-          window.ue.interface.sendMessage("WalletInterface", JSON.stringify({
-            type: "phantom_connect",
-            publicKey: resp.publicKey.toString()
-          }));
+          const pub = resp.publicKey.toString();
+          alert("Phantom Wallet Connected:\n" + pub);
+          window.location.href = `ue://phantom_connected?pub=${pub}`;
         } catch (err) {
-          console.error("User rejected the connection.");
+          alert("User rejected connection.");
         }
       } else {
-        alert("Phantom Wallet not found.");
+        alert("Phantom Wallet not found. Install Phantom extension.");
       }
     }
+
+    function copySecret() {
+      const text = document.getElementById("seckey").value;
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Secret key copied!");
+      });
+    }
+
+    function downloadWallet() {
+      if (!latestWallet) return;
+      const blob = new Blob(
+        [JSON.stringify(latestWallet, null, 2)],
+        { type: "application/json" }
+      );
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `solana_wallet_${latestWallet.pub}.json`;
+      a.click();
+    }
   </script>
-</head>
-<body>
-  <h2>Solana Wallet Actions</h2>
-  <button onclick="createWallet()">Create Wallet</button>
-  <button onclick="connectPhantom()">Connect Phantom Wallet</button>
 </body>
 </html>
